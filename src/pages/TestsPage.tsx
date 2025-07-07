@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   Users, 
@@ -10,77 +10,45 @@ import {
   Trophy,
   Target
 } from 'lucide-react';
+import { Test } from '../types';
+import { getTestsByClass, getAllTests } from '../services/firestore';
+import { useUserPreferences } from '../contexts/UserPreferencesContext';
 
 const TestsPage: React.FC = () => {
-  const [selectedClass, setSelectedClass] = useState<number | 'all'>('all');
+  const { preferences } = useUserPreferences();
+  const [tests, setTests] = useState<Test[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedClass, setSelectedClass] = useState<number | 'all'>(preferences.selectedClass || 'all');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const tests = [
-    {
-      id: 1,
-      title: 'Algebra Fundamentals',
-      subject: 'Mathematics',
-      class: 7,
-      duration: 45,
-      questions: 25,
-      difficulty: 'Medium',
-      rating: 4.5,
-      attempts: 342,
-      description: 'Test your understanding of basic algebraic concepts and problem-solving techniques.'
-    },
-    {
-      id: 2,
-      title: 'Forces and Motion',
-      subject: 'Physics',
-      class: 8,
-      duration: 60,
-      questions: 30,
-      difficulty: 'Hard',
-      rating: 4.7,
-      attempts: 287,
-      description: 'Comprehensive test covering Newton\'s laws, friction, and motion equations.'
-    },
-    {
-      id: 3,
-      title: 'Grammar Essentials',
-      subject: 'English',
-      class: 6,
-      duration: 30,
-      questions: 20,
-      difficulty: 'Easy',
-      rating: 4.3,
-      attempts: 456,
-      description: 'Master the basics of English grammar with this comprehensive assessment.'
-    },
-    {
-      id: 4,
-      title: 'Chemical Reactions',
-      subject: 'Chemistry',
-      class: 8,
-      duration: 50,
-      questions: 28,
-      difficulty: 'Medium',
-      rating: 4.6,
-      attempts: 198,
-      description: 'Explore different types of chemical reactions and their properties.'
-    },
-    {
-      id: 5,
-      title: 'Indian History - Medieval Period',
-      subject: 'History',
-      class: 7,
-      duration: 40,
-      questions: 22,
-      difficulty: 'Medium',
-      rating: 4.4,
-      attempts: 234,
-      description: 'Learn about the major events and dynasties of medieval Indian history.'
-    },
-  ];
-
-  const subjects = ['Mathematics', 'Physics', 'Chemistry', 'English', 'History', 'Geography'];
+  const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
+
+  useEffect(() => {
+    loadTests();
+  }, [selectedClass]);
+
+  const loadTests = async () => {
+    try {
+      setLoading(true);
+      let testsData: Test[];
+      
+      if (selectedClass === 'all') {
+        testsData = await getAllTests();
+      } else {
+        testsData = await getTestsByClass(selectedClass);
+      }
+      
+      // Only show active tests to students
+      const activeTests = testsData.filter(test => test.isActive);
+      setTests(activeTests);
+    } catch (error) {
+      console.error('Error loading tests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredTests = tests.filter(test => {
     const matchesClass = selectedClass === 'all' || test.class === selectedClass;
@@ -99,12 +67,31 @@ const TestsPage: React.FC = () => {
     }
   };
 
+  const getTestDifficulty = (test: Test) => {
+    const difficulties = test.questions.map(q => q.difficulty);
+    const easyCount = difficulties.filter(d => d === 'easy').length;
+    const mediumCount = difficulties.filter(d => d === 'medium').length;
+    const hardCount = difficulties.filter(d => d === 'hard').length;
+    
+    if (hardCount > test.questions.length / 2) return 'Hard';
+    if (easyCount > test.questions.length / 2) return 'Easy';
+    return 'Medium';
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Available Tests</h1>
         <p className="text-gray-600">Choose from our comprehensive collection of tests to assess your knowledge</p>
+        {preferences.selectedClass && (
+          <div className="mt-3 flex items-center space-x-2 text-sm">
+            <span className="text-gray-600">Showing tests for:</span>
+            <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+              Class {preferences.selectedClass}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Filters and Search */}
@@ -156,83 +143,95 @@ const TestsPage: React.FC = () => {
       </div>
 
       {/* Tests Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTests.map((test) => (
-          <div key={test.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-            {/* Test Header */}
-            <div className="p-6 pb-4">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{test.title}</h3>
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                      {test.subject}
-                    </span>
-                    <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
-                      Class {test.class}
-                    </span>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getDifficultyColor(test.difficulty)}`}>
-                      {test.difficulty}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-gray-600 text-sm mb-4">{test.description}</p>
-
-              {/* Test Stats */}
-              <div className="grid grid-cols-3 gap-4 mb-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div className="text-sm font-medium text-gray-900">{test.duration}m</div>
-                  <div className="text-xs text-gray-500">Duration</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <BookOpen className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div className="text-sm font-medium text-gray-900">{test.questions}</div>
-                  <div className="text-xs text-gray-500">Questions</div>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center mb-1">
-                    <Users className="h-4 w-4 text-gray-400" />
-                  </div>
-                  <div className="text-sm font-medium text-gray-900">{test.attempts}</div>
-                  <div className="text-xs text-gray-500">Attempts</div>
-                </div>
-              </div>
-
-              {/* Rating */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-1">
-                  <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                  <span className="text-sm font-medium text-gray-900">{test.rating}</span>
-                  <span className="text-sm text-gray-500">rating</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Test Actions */}
-            <div className="px-6 pb-6">
-              <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
-                <Play className="h-4 w-4" />
-                <span>Start Test</span>
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredTests.length === 0 && (
+      {loading ? (
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading tests...</p>
+        </div>
+      ) : filteredTests.length === 0 ? (
         <div className="text-center py-12">
           <div className="bg-gray-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
             <Target className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No tests found</h3>
-          <p className="text-gray-500">Try adjusting your filters or search terms</p>
+          <p className="text-gray-500">
+            {tests.length === 0 
+              ? "No tests are currently available for your class. Check back soon!"
+              : "Try adjusting your filters or search terms"
+            }
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTests.map((test) => (
+            <div key={test.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+              {/* Test Header */}
+              <div className="p-6 pb-4">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{test.title}</h3>
+                    <div className="flex items-center space-x-2 mb-3">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                        {test.subject}
+                      </span>
+                      <span className="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded-full">
+                        Class {test.class}
+                      </span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${getDifficultyColor(getTestDifficulty(test))}`}>
+                        {getTestDifficulty(test)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-600 text-sm mb-4">{test.description}</p>
+
+                {/* Test Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <Clock className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">{test.duration}m</div>
+                    <div className="text-xs text-gray-500">Duration</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <BookOpen className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">{test.questions.length}</div>
+                    <div className="text-xs text-gray-500">Questions</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <Target className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <div className="text-sm font-medium text-gray-900">{test.totalMarks}</div>
+                    <div className="text-xs text-gray-500">Marks</div>
+                  </div>
+                </div>
+
+                {/* Created Date */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-xs text-gray-500">
+                    Created: {new Date(test.createdAt).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="text-sm font-medium text-gray-900">New</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Test Actions */}
+              <div className="px-6 pb-6">
+                <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                  <Play className="h-4 w-4" />
+                  <span>Start Test</span>
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

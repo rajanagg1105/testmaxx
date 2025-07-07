@@ -1,15 +1,12 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { 
   User as FirebaseUser, 
-  onAuthStateChanged, 
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut,
-  updateProfile
+  onAuthStateChanged
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../config/firebase';
 import { User } from '../types';
+import { loginUser, registerUser, logoutUser } from '../services/auth';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -35,71 +32,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      const firebaseUser = result.user;
-      
-      // Get user data from Firestore
-      const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-      
-      if (userDoc.exists()) {
-        setCurrentUser(userDoc.data() as User);
-      } else {
-        throw new Error('User data not found. Please contact support.');
-      }
+      const user = await loginUser(email, password);
+      setCurrentUser(user);
     } catch (error: any) {
-      console.error('Login error:', error);
-      throw new Error(error.message || 'Login failed');
+      console.error('Login failed:', error);
+      throw error;
     }
   };
 
   const register = async (email: string, password: string, displayName: string) => {
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      const firebaseUser = result.user;
-      
-      // Update the user's display name
-      await updateProfile(firebaseUser, {
-        displayName: displayName
-      });
-
-      // Create user document in Firestore
-      const newUser: User = {
-        uid: firebaseUser.uid,
-        email: firebaseUser.email!,
-        displayName: displayName,
-        role: 'student', // Default to student
-        createdAt: new Date()
-      };
-      
-      await setDoc(doc(db, 'users', firebaseUser.uid), newUser);
-      setCurrentUser(newUser);
+      const user = await registerUser(email, password, displayName);
+      setCurrentUser(user);
     } catch (error: any) {
-      console.error('Registration error:', error);
-      let errorMessage = 'Registration failed';
-      
-      if (error.code === 'auth/email-already-in-use') {
-        errorMessage = 'An account with this email already exists';
-      } else if (error.code === 'auth/weak-password') {
-        errorMessage = 'Password is too weak';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Invalid email address';
-      }
-      
-      throw new Error(errorMessage);
+      console.error('Registration failed:', error);
+      throw error;
     }
   };
 
   const logout = async () => {
-    await signOut(auth);
+    await logoutUser();
     setCurrentUser(null);
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        if (userDoc.exists()) {
-          setCurrentUser(userDoc.data() as User);
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          if (userDoc.exists()) {
+            setCurrentUser(userDoc.data() as User);
+          } else {
+            console.error('User document not found');
+            setCurrentUser(null);
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setCurrentUser(null);
         }
       } else {
         setCurrentUser(null);
