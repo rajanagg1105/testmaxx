@@ -13,6 +13,7 @@ import {
 import { Test } from '../types';
 import { getTestsByClass, getAllTests } from '../services/firestore';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
+import TestTaker from '../components/Test/TestTaker';
 
 const TestsPage: React.FC = () => {
   const { preferences } = useUserPreferences();
@@ -21,6 +22,7 @@ const TestsPage: React.FC = () => {
   const [selectedClass, setSelectedClass] = useState<number | 'all'>(preferences.selectedClass || 'all');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeTest, setActiveTest] = useState<Test | null>(null);
 
   const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
@@ -77,6 +79,56 @@ const TestsPage: React.FC = () => {
     if (easyCount > test.questions.length / 2) return 'Easy';
     return 'Medium';
   };
+
+  const handleStartTest = (test: Test) => {
+    setActiveTest(test);
+  };
+
+  const handleTestSubmit = (answers: Record<string, string | number>, timeSpent: number) => {
+    // Calculate score
+    let correctAnswers = 0;
+    
+    if (activeTest) {
+      activeTest.questions.forEach(question => {
+        const userAnswer = answers[question.id];
+        if (userAnswer === question.correctAnswer) {
+          correctAnswers++;
+        }
+      });
+
+      const score = correctAnswers;
+      const percentage = Math.round((score / activeTest.questions.length) * 100);
+      
+      // TODO: Save test attempt to Firestore
+      console.log('Test submitted:', {
+        testId: activeTest.id,
+        answers,
+        score,
+        percentage,
+        timeSpent
+      });
+
+      alert(`Test completed! You scored ${score}/${activeTest.questions.length} (${percentage}%)`);
+    }
+    
+    setActiveTest(null);
+  };
+
+  const handleCloseTest = () => {
+    if (window.confirm('Are you sure you want to exit the test? Your progress will be lost.')) {
+      setActiveTest(null);
+    }
+  };
+
+  if (activeTest) {
+    return (
+      <TestTaker
+        test={activeTest}
+        onSubmit={handleTestSubmit}
+        onClose={handleCloseTest}
+      />
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -225,7 +277,10 @@ const TestsPage: React.FC = () => {
 
               {/* Test Actions */}
               <div className="px-6 pb-6">
-                <button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                <button 
+                  onClick={() => handleStartTest(test)}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                >
                   <Play className="h-4 w-4" />
                   <span>Start Test</span>
                 </button>

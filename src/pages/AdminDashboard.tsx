@@ -15,6 +15,8 @@ import {
 import { getAllTests, getAllStudyMaterials } from '../services/firestore';
 import { Test, StudyMaterial } from '../types';
 import TestManager from '../components/Admin/TestManager';
+import MaterialManager from '../components/Admin/MaterialManager';
+import StudentManager from '../components/Admin/StudentManager';
 
 const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'tests' | 'materials' | 'students'>('dashboard');
@@ -42,13 +44,14 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Real stats based on actual data
   const stats = {
-    totalStudents: 1234, // This would come from user collection
+    totalStudents: 0, // This would come from user collection with role 'student'
     totalTests: tests.length,
     activeTests: tests.filter(t => t.isActive).length,
     totalMaterials: materials.length,
     totalQuestions: tests.reduce((sum, test) => sum + test.questions.length, 0),
-    testAttempts: 8567 // This would come from test attempts collection
+    testAttempts: 0 // This would come from test attempts collection
   };
 
   const recentActivity = [
@@ -86,8 +89,17 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  // Render different tabs
   if (activeTab === 'tests') {
     return <TestManager />;
+  }
+
+  if (activeTab === 'materials') {
+    return <MaterialManager />;
+  }
+
+  if (activeTab === 'students') {
+    return <StudentManager />;
   }
 
   return (
@@ -150,7 +162,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Total Students</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalStudents.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalStudents}</p>
             </div>
             <div className={`p-3 rounded-lg ${getColorClasses('blue')}`}>
               <Users className="h-6 w-6" />
@@ -187,7 +199,7 @@ const AdminDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Test Attempts</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.testAttempts.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.testAttempts}</p>
             </div>
             <div className={`p-3 rounded-lg ${getColorClasses('orange')}`}>
               <TrendingUp className="h-6 w-6" />
@@ -207,7 +219,10 @@ const AdminDashboard: React.FC = () => {
             <Plus className="h-5 w-5" />
             <span>Create New Test</span>
           </button>
-          <button className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors">
+          <button 
+            onClick={() => setActiveTab('materials')}
+            className="flex items-center justify-center space-x-2 bg-purple-600 text-white py-3 px-4 rounded-lg hover:bg-purple-700 transition-colors"
+          >
             <BookOpen className="h-5 w-5" />
             <span>Upload Study Material</span>
           </button>
@@ -343,16 +358,16 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center space-x-8">
             <div className="text-center">
-              <div className="text-2xl font-bold">87%</div>
-              <div className="text-xs text-blue-100">Avg Score</div>
+              <div className="text-2xl font-bold">{stats.totalTests}</div>
+              <div className="text-xs text-blue-100">Total Tests</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">92%</div>
-              <div className="text-xs text-blue-100">Completion Rate</div>
+              <div className="text-2xl font-bold">{stats.totalQuestions}</div>
+              <div className="text-xs text-blue-100">Questions</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">4.8</div>
-              <div className="text-xs text-blue-100">Student Rating</div>
+              <div className="text-2xl font-bold">{stats.totalMaterials}</div>
+              <div className="text-xs text-blue-100">Materials</div>
             </div>
           </div>
         </div>
