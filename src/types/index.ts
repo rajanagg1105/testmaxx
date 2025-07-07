@@ -17,6 +17,8 @@ export interface Question {
   explanation?: string;
   topic: string;
   difficulty: 'easy' | 'medium' | 'hard';
+  hasImage?: boolean;
+  imageUrl?: string;
 }
 
 export interface Test {

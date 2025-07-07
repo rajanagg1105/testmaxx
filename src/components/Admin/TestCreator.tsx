@@ -13,7 +13,9 @@ import {
   ChevronUp,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Image,
+  Upload
 } from 'lucide-react';
 import { Question, Test } from '../../types';
 import { createTest } from '../../services/firestore';
@@ -60,7 +62,9 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
         correctAnswer: 0,
         explanation: '',
         topic: '',
-        difficulty: 'medium' as const
+        difficulty: 'medium' as const,
+        hasImage: false,
+        imageUrl: ''
       }
     },
     {
@@ -74,7 +78,9 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
         correctAnswer: 0,
         explanation: '',
         topic: '',
-        difficulty: 'easy' as const
+        difficulty: 'easy' as const,
+        hasImage: false,
+        imageUrl: ''
       }
     },
     {
@@ -87,7 +93,9 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
         correctAnswer: '',
         explanation: '',
         topic: '',
-        difficulty: 'medium' as const
+        difficulty: 'medium' as const,
+        hasImage: false,
+        imageUrl: ''
       }
     },
     {
@@ -107,7 +115,9 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
         correctAnswer: 0,
         explanation: '',
         topic: '',
-        difficulty: 'hard' as const
+        difficulty: 'hard' as const,
+        hasImage: false,
+        imageUrl: ''
       }
     }
   ];
@@ -152,6 +162,12 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
     const newQuestions = [...questions];
     newQuestions.splice(questionIndex + 1, 0, duplicatedQuestion);
     setQuestions(newQuestions);
+  };
+
+  const handleImageUpload = (questionId: string, file: File) => {
+    // In a real app, this would upload to Firebase Storage
+    const imageUrl = URL.createObjectURL(file);
+    updateQuestion(questionId, { hasImage: true, imageUrl });
   };
 
   const calculateTotalMarks = () => {
@@ -424,6 +440,12 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
                                   {question.topic}
                                 </span>
                               )}
+                              {question.hasImage && (
+                                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center space-x-1">
+                                  <Image className="h-3 w-3" />
+                                  <span>Image</span>
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -472,6 +494,45 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
                           />
                         </div>
 
+                        {/* Image Upload */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Question Image (Optional)</label>
+                          <div className="flex items-center space-x-4">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleImageUpload(question.id, file);
+                              }}
+                              className="hidden"
+                              id={`image-${question.id}`}
+                            />
+                            <label
+                              htmlFor={`image-${question.id}`}
+                              className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                            >
+                              <Upload className="h-4 w-4" />
+                              <span>Upload Image</span>
+                            </label>
+                            {question.hasImage && question.imageUrl && (
+                              <div className="flex items-center space-x-2">
+                                <img
+                                  src={question.imageUrl}
+                                  alt="Question"
+                                  className="w-16 h-16 object-cover rounded border"
+                                />
+                                <button
+                                  onClick={() => updateQuestion(question.id, { hasImage: false, imageUrl: '' })}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {(question.type === 'mcq' || question.type === 'true-false' || question.type === 'assertion-reason') && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
@@ -485,18 +546,47 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
                                     onChange={() => updateQuestion(question.id, { correctAnswer: optionIndex })}
                                     className="text-blue-600"
                                   />
-                                  <input
-                                    type="text"
-                                    value={option}
-                                    onChange={(e) => {
-                                      const newOptions = [...(question.options || [])];
-                                      newOptions[optionIndex] = e.target.value;
-                                      updateQuestion(question.id, { options: newOptions });
-                                    }}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder={`Option ${optionIndex + 1}`}
-                                    readOnly={question.type === 'true-false' || question.type === 'assertion-reason'}
-                                  />
+                                  <div className="flex-1 flex items-center space-x-2">
+                                    <input
+                                      type="text"
+                                      value={option}
+                                      onChange={(e) => {
+                                        const newOptions = [...(question.options || [])];
+                                        newOptions[optionIndex] = e.target.value;
+                                        updateQuestion(question.id, { options: newOptions });
+                                      }}
+                                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      placeholder={`Option ${optionIndex + 1}`}
+                                      readOnly={question.type === 'true-false' || question.type === 'assertion-reason'}
+                                    />
+                                    {question.type === 'mcq' && (
+                                      <div>
+                                        <input
+                                          type="file"
+                                          accept="image/*"
+                                          onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                              // Handle option image upload
+                                              const imageUrl = URL.createObjectURL(file);
+                                              const newOptions = [...(question.options || [])];
+                                              newOptions[optionIndex] = `${option} [Image: ${file.name}]`;
+                                              updateQuestion(question.id, { options: newOptions });
+                                            }
+                                          }}
+                                          className="hidden"
+                                          id={`option-image-${question.id}-${optionIndex}`}
+                                        />
+                                        <label
+                                          htmlFor={`option-image-${question.id}-${optionIndex}`}
+                                          className="p-2 text-gray-400 hover:text-blue-600 transition-colors cursor-pointer"
+                                          title="Add image to option"
+                                        >
+                                          <Image className="h-4 w-4" />
+                                        </label>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -687,6 +777,14 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
                       </span>
                       <div className="flex-1">
                         <p className="text-gray-900 font-medium mb-2">{question.question || 'No question text'}</p>
+                        
+                        {question.hasImage && question.imageUrl && (
+                          <img
+                            src={question.imageUrl}
+                            alt="Question"
+                            className="max-w-xs h-auto rounded border mb-3"
+                          />
+                        )}
                         
                         {(question.type === 'mcq' || question.type === 'true-false' || question.type === 'assertion-reason') && (
                           <div className="space-y-2">
