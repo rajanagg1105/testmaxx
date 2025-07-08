@@ -51,7 +51,7 @@ const TestManager: React.FC = () => {
       try {
         await deleteTest(testId);
         setTests(tests.filter(test => test.id !== testId));
-        alert('Test deleted successfully!');
+        alert('Test deleted successfully! It has been removed from all users.');
       } catch (error) {
         console.error('Error deleting test:', error);
         alert('Failed to delete test. Please try again.');
@@ -364,9 +364,9 @@ const TestManager: React.FC = () => {
                                       handleDeleteTest(test.id);
                                       setShowDropdown(null);
                                     }}
-                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
                                   >
-                                    Delete Test
+                                    🗑️ Delete Test
                                   </button>
                                 </div>
                               </div>

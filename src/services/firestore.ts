@@ -104,7 +104,21 @@ export const updateTest = async (testId: string, updates: Partial<Test>) => {
 };
 
 export const deleteTest = async (testId: string) => {
+  // First get the test to log what's being deleted
+  const testDoc = await getDoc(doc(db, 'tests', testId));
+  if (testDoc.exists()) {
+    const testData = testDoc.data();
+    console.log(`Deleting test: ${testData.title} (${testData.subject} - Class ${testData.class})`);
+  }
+  
+  // Delete the test document
   await deleteDoc(doc(db, 'tests', testId));
+  
+  // Also delete any related test attempts (optional - you might want to keep for analytics)
+  // const attemptsQuery = query(collection(db, 'testAttempts'), where('testId', '==', testId));
+  // const attemptsSnapshot = await getDocs(attemptsQuery);
+  // const deletePromises = attemptsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+  // await Promise.all(deletePromises);
 };
 
 export const updateStudyMaterial = async (materialId: string, updates: Partial<StudyMaterial>) => {

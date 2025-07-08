@@ -29,6 +29,13 @@ const TestsPage: React.FC = () => {
 
   useEffect(() => {
     loadTests();
+    
+    // Set up real-time listener for test updates
+    const interval = setInterval(() => {
+      loadTests();
+    }, 5000); // Refresh every 5 seconds
+    
+    return () => clearInterval(interval);
   }, [selectedClass]);
 
   const loadTests = async () => {

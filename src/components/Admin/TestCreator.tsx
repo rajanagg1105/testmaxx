@@ -235,7 +235,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       setShowPreview(false);
       
       onTestCreated();
-      alert('Test created successfully!');
+      alert('Test created successfully! It is now available to all students.');
     } catch (error) {
       console.error('Error creating test:', error);
       alert('Failed to create test. Please try again.');
@@ -255,7 +255,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
 
   if (!isCreating) {
     return (
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center cursor-pointer hover:shadow-md transition-shadow" onClick={() => setIsCreating(true)}>
         <div className="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
           <Plus className="h-8 w-8 text-blue-600" />
         </div>
@@ -263,7 +263,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
         <p className="text-gray-600 mb-6">Design comprehensive tests with multiple question types and templates</p>
         <button
           onClick={() => setIsCreating(true)}
-          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 mx-auto"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center space-x-2 mx-auto text-lg"
         >
           <Plus className="h-5 w-5" />
           <span>Start Creating Test</span>

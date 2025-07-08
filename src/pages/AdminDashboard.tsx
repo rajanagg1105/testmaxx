@@ -31,6 +31,13 @@ const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Set up auto-refresh for real-time updates
+    const interval = setInterval(() => {
+      loadDashboardData();
+    }, 10000); // Refresh every 10 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadDashboardData = async () => {
