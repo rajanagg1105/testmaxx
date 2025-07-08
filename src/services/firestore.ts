@@ -32,7 +32,7 @@ export const getUserById = async (userId: string) => {
 export const createTest = async (testData: Omit<Test, 'id' | 'createdAt'>) => {
   const test = {
     ...testData,
-    createdAt: Timestamp.now()
+    createdAt: new Date()
   };
   return await addDoc(collection(db, 'tests'), test);
 };
@@ -77,7 +77,7 @@ export const getTestAttemptsByUser = async (userId: string) => {
 export const createStudyMaterial = async (materialData: Omit<StudyMaterial, 'id' | 'uploadedAt'>) => {
   const material = {
     ...materialData,
-    uploadedAt: Timestamp.now()
+    uploadedAt: new Date()
   };
   return await addDoc(collection(db, 'studyMaterials'), material);
 };

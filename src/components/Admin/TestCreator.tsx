@@ -23,9 +23,10 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface TestCreatorProps {
   onTestCreated: () => void;
+  onCancel: () => void;
 }
 
-const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
+const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) => {
   const { currentUser } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -289,7 +290,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated }) => {
               <span>{showPreview ? 'Hide Preview' : 'Preview'}</span>
             </button>
             <button
-              onClick={() => setIsCreating(false)}
+              onClick={onCancel}
               className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
             >
               <X className="h-4 w-4" />

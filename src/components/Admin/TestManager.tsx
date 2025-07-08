@@ -90,13 +90,16 @@ const TestManager: React.FC = () => {
 
   const stats = getTestStats();
 
+  const handleTestCreated = () => {
+    setShowCreator(false);
+    loadTests(); // Reload tests after creation
+  };
+
   if (showCreator) {
     return (
       <TestCreator 
-        onTestCreated={() => {
-          setShowCreator(false);
-          loadTests();
-        }}
+        onTestCreated={handleTestCreated}
+        onCancel={() => setShowCreator(false)}
       />
     );
   }
