@@ -213,7 +213,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       setSaving(true);
       
       // Create the test object with all required fields
-      const testData: Omit<Test, 'id' | 'createdAt'> = {
+      const testToSave: Omit<Test, 'id' | 'createdAt'> = {
         ...testData,
         questions,
         totalMarks: calculateTotalMarks(),
@@ -221,7 +221,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       };
 
       // Save test to Firestore
-      const docRef = await createTest(testData);
+      const docRef = await createTest(testToSave);
       console.log('Test created with ID:', docRef.id);
       
       // Reset form
@@ -239,7 +239,7 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       
       // Notify parent component and show success message
       onTestCreated();
-      alert(`✅ Test "${testData.title}" created successfully!\n\nThe test is now live and available to all students in Class ${testData.class}.`);
+      alert(`✅ Test "${testToSave.title}" created successfully!\n\nThe test is now live and available to all students in Class ${testToSave.class}.`);
     } catch (error) {
       console.error('Error creating test:', error);
       alert('❌ Failed to create test. Please check your internet connection and try again.');
