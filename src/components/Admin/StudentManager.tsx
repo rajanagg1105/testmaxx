@@ -12,13 +12,11 @@ import {
   Target,
   Clock
 } from 'lucide-react';
+import { User } from '../../types';
+import { getAllStudents, getStudentStats } from '../../services/firestore';
 
-interface Student {
+interface StudentWithStats extends User {
   id: string;
-  name: string;
-  email: string;
-  class: number;
-  joinedDate: string;
   testsCompleted: number;
   averageScore: number;
   totalStudyTime: number;
@@ -27,7 +25,7 @@ interface Student {
 }
 
 const StudentManager: React.FC = () => {
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentWithStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<number | 'all'>('all');
@@ -37,78 +35,47 @@ const StudentManager: React.FC = () => {
   const classes = [6, 7, 8];
 
   useEffect(() => {
-    // Simulate loading students data
-    // In real implementation, this would fetch from Firestore users collection
-    setTimeout(() => {
-      const mockStudents: Student[] = [
-        {
-          id: '1',
-          name: 'Arjun Sharma',
-          email: 'arjun.sharma@email.com',
-          class: 8,
-          joinedDate: '2024-01-15',
-          testsCompleted: 12,
-          averageScore: 95,
-          totalStudyTime: 240,
-          lastActive: '2024-01-20',
-          status: 'active'
-        },
-        {
-          id: '2',
-          name: 'Priya Patel',
-          email: 'priya.patel@email.com',
-          class: 7,
-          joinedDate: '2024-01-10',
-          testsCompleted: 10,
-          averageScore: 92,
-          totalStudyTime: 180,
-          lastActive: '2024-01-19',
-          status: 'active'
-        },
-        {
-          id: '3',
-          name: 'Rahul Kumar',
-          email: 'rahul.kumar@email.com',
-          class: 8,
-          joinedDate: '2024-01-08',
-          testsCompleted: 15,
-          averageScore: 89,
-          totalStudyTime: 320,
-          lastActive: '2024-01-18',
-          status: 'active'
-        },
-        {
-          id: '4',
-          name: 'Sneha Singh',
-          email: 'sneha.singh@email.com',
-          class: 6,
-          joinedDate: '2024-01-12',
-          testsCompleted: 8,
-          averageScore: 87,
-          totalStudyTime: 150,
-          lastActive: '2024-01-17',
-          status: 'active'
-        },
-        {
-          id: '5',
-          name: 'Vikram Joshi',
-          email: 'vikram.joshi@email.com',
-          class: 7,
-          joinedDate: '2024-01-05',
-          testsCompleted: 6,
-          averageScore: 78,
-          totalStudyTime: 90,
-          lastActive: '2024-01-10',
-          status: 'inactive'
-        }
-      ];
-      setStudents(mockStudents);
-      setLoading(false);
-    }, 1000);
+    loadStudents();
+    
+    // Set up real-time updates
+    const interval = setInterval(() => {
+      loadStudents();
+    }, 10000); // Refresh every 10 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const studentsData = await getAllStudents();
+      
+      // Get stats for each student
+      const studentsWithStats = await Promise.all(
+        studentsData.map(async (student) => {
+          const stats = await getStudentStats(student.uid);
+          return {
+            ...student,
+            id: student.uid,
+            testsCompleted: stats.testsCompleted,
+            averageScore: stats.averageScore,
+            totalStudyTime: stats.totalStudyTime,
+            lastActive: stats.lastActive || new Date(student.createdAt).toISOString().split('T')[0],
+            status: stats.status
+          } as StudentWithStats;
+        })
+      );
+      
+      setStudents(studentsWithStats);
+    } catch (error) {
+      console.error('Error loading students:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = student.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesClass = selectedClass === 'all' || student.class === selectedClass;
     const matchesStatus = selectedStatus === 'all' || student.status === selectedStatus;
@@ -303,10 +270,10 @@ const StudentManager: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-3">
                         <div className="bg-gradient-to-r from-blue-500 to-purple-500 w-10 h-10 rounded-full flex items-center justify-center text-white font-medium">
-                          {student.name.split(' ').map(n => n[0]).join('')}
+                          {student.displayName.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <h3 className="font-medium text-gray-900">{student.name}</h3>
+                          <h3 className="font-medium text-gray-900">{student.displayName}</h3>
                           <div className="flex items-center space-x-1 text-sm text-gray-500">
                             <Mail className="h-3 w-3" />
                             <span>{student.email}</span>
@@ -315,9 +282,15 @@ const StudentManager: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                        Class {student.class}
-                      </span>
+                      {student.class ? (
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                          Class {student.class}
+                        </span>
+                      ) : (
+                        <span className="bg-gray-100 text-gray-600 text-xs font-medium px-2 py-1 rounded-full">
+                          Not Set
+                        </span>
+                      )}
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2">
@@ -346,7 +319,7 @@ const StudentManager: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        <span>{new Date(student.lastActive).toLocaleDateString()}</span>
+                        <span>{student.lastActive ? new Date(student.lastActive).toLocaleDateString() : 'Never'}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">

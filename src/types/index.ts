@@ -41,12 +41,12 @@ export interface TestAttempt {
   answers: Record<string, string | number>;
   score: number;
   totalMarks: number;
-  timeSpent: number; // in seconds
-  completedAt: Date;
+  timeSpent?: number; // in seconds
+  completedAt: Date | any; // Allow Firestore Timestamp
   analysis: {
     topicPerformance: Record<string, { correct: number; total: number }>;
     suggestions: string[];
-  };
+  } | null;
 }
 
 export interface StudyMaterial {

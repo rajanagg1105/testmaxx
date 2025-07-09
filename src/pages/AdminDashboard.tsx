@@ -16,6 +16,7 @@ import { getAllTests, getAllStudyMaterials } from '../services/firestore';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Test, StudyMaterial } from '../types';
+import { getAllStudents } from '../services/firestore';
 import TestManager from '../components/Admin/TestManager';
 import MaterialManager from '../components/Admin/MaterialManager';
 import StudentManager from '../components/Admin/StudentManager';
@@ -53,10 +54,9 @@ const AdminDashboard: React.FC = () => {
       setTests(testsData);
       setMaterials(materialsData);
 
-      // Load student count
-      const studentsQuery = query(collection(db, 'users'), where('role', '==', 'student'));
-      const studentsSnapshot = await getDocs(studentsQuery);
-      setStudentCount(studentsSnapshot.size);
+      // Load student count using the service function
+      const studentsData = await getAllStudents();
+      setStudentCount(studentsData.length);
 
       // Load test attempts count
       const attemptsSnapshot = await getDocs(collection(db, 'testAttempts'));
