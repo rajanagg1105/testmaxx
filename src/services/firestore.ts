@@ -114,21 +114,83 @@ export const updateTest = async (testId: string, updates: Partial<Test>) => {
 };
 
 export const deleteTest = async (testId: string) => {
-  // First get the test to log what's being deleted
-  const testDoc = await getDoc(doc(db, 'tests', testId));
-  if (testDoc.exists()) {
-    const testData = testDoc.data();
-    console.log(`Deleting test: ${testData.title} (${testData.subject} - Class ${testData.class})`);
+  try {
+    // First get the test to log what's being deleted
+    const testDoc = await getDoc(doc(db, 'tests', testId));
+    if (testDoc.exists()) {
+      const testData = testDoc.data();
+      console.log(`Deleting test: ${testData.title} (${testData.subject} - Class ${testData.class})`);
+    }
+    
+    // Delete the test document
+    await deleteDoc(doc(db, 'tests', testId));
+    console.log(`Test ${testId} deleted successfully`);
+    
+    // Also delete any related test attempts to maintain data consistency
+    const attemptsQuery = query(collection(db, 'testAttempts'), where('testId', '==', testId));
+    const attemptsSnapshot = await getDocs(attemptsQuery);
+    
+    if (!attemptsSnapshot.empty) {
+      const deletePromises = attemptsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      console.log(`Deleted ${attemptsSnapshot.size} test attempts for test ${testId}`);
+    }
+  } catch (error) {
+    console.error('Error deleting test:', error);
+    throw error;
   }
-  
-  // Delete the test document
-  await deleteDoc(doc(db, 'tests', testId));
-  
-  // Also delete any related test attempts (optional - you might want to keep for analytics)
-  // const attemptsQuery = query(collection(db, 'testAttempts'), where('testId', '==', testId));
-  // const attemptsSnapshot = await getDocs(attemptsQuery);
-  // const deletePromises = attemptsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-  // await Promise.all(deletePromises);
+};
+
+// Get all students (users with role 'student')
+export const getAllStudents = async () => {
+  const q = query(
+    collection(db, 'users'),
+    where('role', '==', 'student'),
+    orderBy('createdAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+};
+
+// Get student statistics
+export const getStudentStats = async (studentId: string) => {
+  try {
+    // Get test attempts for this student
+    const attemptsQuery = query(
+      collection(db, 'testAttempts'),
+      where('userId', '==', studentId),
+      orderBy('completedAt', 'desc')
+    );
+    const attemptsSnapshot = await getDocs(attemptsQuery);
+    const attempts = attemptsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+    
+    // Calculate statistics
+    const testsCompleted = attempts.length;
+    const totalScore = attempts.reduce((sum, attempt) => sum + attempt.score, 0);
+    const totalMarks = attempts.reduce((sum, attempt) => sum + attempt.totalMarks, 0);
+    const averageScore = totalMarks > 0 ? Math.round((totalScore / totalMarks) * 100) : 0;
+    const totalStudyTime = attempts.reduce((sum, attempt) => sum + (attempt.timeSpent || 0), 0);
+    
+    // Get last active date
+    const lastActive = attempts.length > 0 ? attempts[0].completedAt : null;
+    
+    return {
+      testsCompleted,
+      averageScore,
+      totalStudyTime: Math.round(totalStudyTime / 60), // Convert to minutes
+      lastActive: lastActive ? new Date(lastActive).toISOString().split('T')[0] : null,
+      status: lastActive && new Date(lastActive) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) ? 'active' : 'inactive'
+    };
+  } catch (error) {
+    console.error('Error getting student stats:', error);
+    return {
+      testsCompleted: 0,
+      averageScore: 0,
+      totalStudyTime: 0,
+      lastActive: null,
+      status: 'inactive' as const
+    };
+  }
 };
 
 export const updateStudyMaterial = async (materialId: string, updates: Partial<StudyMaterial>) => {

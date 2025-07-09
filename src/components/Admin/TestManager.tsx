@@ -362,14 +362,16 @@ const TestManager: React.FC = () => {
                                   >
                                     Duplicate Test
                                   </button>
+                                  <div className="border-t border-gray-100 my-1"></div>
                                   <button
                                     onClick={() => {
                                       handleDeleteTest(test.id);
                                       setShowDropdown(null);
                                     }}
-                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium"
+                                    className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center space-x-2"
                                   >
-                                    🗑️ Delete Test
+                                    <Trash2 className="h-4 w-4" />
+                                    <span>Delete Test</span>
                                   </button>
                                 </div>
                               </div>
