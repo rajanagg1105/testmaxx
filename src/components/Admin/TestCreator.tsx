@@ -239,13 +239,66 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       
       // Notify parent component and show success message
       onTestCreated();
-      alert(`✅ Test "${testToSave.title}" created successfully!\n\nThe test is now live and available to all students in Class ${testToSave.class}.`);
+      // Show styled success message instead of alert
+      showSuccessDialog(testToSave.title, testToSave.class);
     } catch (error) {
       console.error('Error creating test:', error);
-      alert('❌ Failed to create test. Please check your internet connection and try again.');
+      showErrorDialog();
     } finally {
       setSaving(false);
     }
+  };
+
+  const showSuccessDialog = (testTitle: string, testClass: number) => {
+    // Create and show a styled success dialog
+    const dialog = document.createElement('div');
+    dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    dialog.innerHTML = `
+      <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div class="p-6 text-center">
+          <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-green-100 rounded-full">
+            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Test Created Successfully!</h3>
+          <p class="text-gray-600 mb-4">"${testTitle}" is now live and available to all students in Class ${testClass}.</p>
+          <button onclick="this.closest('.fixed').remove()" class="bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors">
+            Continue
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(dialog);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (dialog.parentNode) {
+        dialog.remove();
+      }
+    }, 5000);
+  };
+
+  const showErrorDialog = () => {
+    const dialog = document.createElement('div');
+    dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    dialog.innerHTML = `
+      <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+        <div class="p-6 text-center">
+          <div class="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full">
+            <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Creation Failed</h3>
+          <p class="text-gray-600 mb-4">Failed to create test. Please check your internet connection and try again.</p>
+          <button onclick="this.closest('.fixed').remove()" class="bg-red-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-red-700 transition-colors">
+            Try Again
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(dialog);
   };
 
   const getDifficultyColor = (difficulty: string) => {
