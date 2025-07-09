@@ -17,15 +17,20 @@ import {
 import { Test } from '../../types';
 import { getAllTests, deleteTest, updateTest } from '../../services/firestore';
 import TestCreator from './TestCreator';
+import TestEditor from './TestEditor';
+import TestPreview from './TestPreview';
 
 const TestManager: React.FC = () => {
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreator, setShowCreator] = useState(false);
+  const [editingTest, setEditingTest] = useState<Test | null>(null);
+  const [previewingTest, setPreviewingTest] = useState<Test | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<number | 'all'>('all');
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [showDropdown, setShowDropdown] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
 
   const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
@@ -47,15 +52,14 @@ const TestManager: React.FC = () => {
   };
 
   const handleDeleteTest = async (testId: string) => {
-    if (window.confirm('Are you sure you want to delete this test? This action cannot be undone.')) {
-      try {
-        await deleteTest(testId);
-        setTests(tests.filter(test => test.id !== testId));
-        alert('Test deleted successfully! It has been removed from all users.');
-      } catch (error) {
-        console.error('Error deleting test:', error);
-        alert('Failed to delete test. Please try again.');
-      }
+    try {
+      await deleteTest(testId);
+      setTests(tests.filter(test => test.id !== testId));
+      setShowDeleteConfirm(null);
+      setShowDropdown(null);
+    } catch (error) {
+      console.error('Error deleting test:', error);
+      alert('Failed to delete test. Please try again.');
     }
   };
 
@@ -98,11 +102,37 @@ const TestManager: React.FC = () => {
     }, 1000);
   };
 
+  const handleTestUpdated = () => {
+    setEditingTest(null);
+    setTimeout(() => {
+      loadTests();
+    }, 1000);
+  };
+
   if (showCreator) {
     return (
       <TestCreator 
         onTestCreated={handleTestCreated}
         onCancel={() => setShowCreator(false)}
+      />
+    );
+  }
+
+  if (editingTest) {
+    return (
+      <TestEditor
+        test={editingTest}
+        onTestUpdated={handleTestUpdated}
+        onCancel={() => setEditingTest(null)}
+      />
+    );
+  }
+
+  if (previewingTest) {
+    return (
+      <TestPreview
+        test={previewingTest}
+        onClose={() => setPreviewingTest(null)}
       />
     );
   }
@@ -318,12 +348,14 @@ const TestManager: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-end space-x-2">
                         <button
+                          onClick={() => setPreviewingTest(test)}
                           className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
                           title="View Test"
                         >
                           <Eye className="h-4 w-4" />
                         </button>
                         <button
+                          onClick={() => setEditingTest(test)}
                           className="p-2 text-gray-400 hover:text-green-600 transition-colors"
                           title="Edit Test"
                         >
@@ -365,7 +397,7 @@ const TestManager: React.FC = () => {
                                   <div className="border-t border-gray-100 my-1"></div>
                                   <button
                                     onClick={() => {
-                                      handleDeleteTest(test.id);
+                                      setShowDeleteConfirm(test.id);
                                       setShowDropdown(null);
                                     }}
                                     className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-medium flex items-center space-x-2"
@@ -387,6 +419,42 @@ const TestManager: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">
+                Delete Test
+              </h3>
+              
+              <p className="text-gray-600 text-center mb-6">
+                Are you sure you want to delete this test? This action cannot be undone and will remove the test from all students' interfaces.
+              </p>
+              
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteTest(showDeleteConfirm)}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                >
+                  Delete Test
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
