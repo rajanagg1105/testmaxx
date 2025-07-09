@@ -92,7 +92,10 @@ const TestManager: React.FC = () => {
 
   const handleTestCreated = () => {
     setShowCreator(false);
-    loadTests(); // Reload tests after creation
+    // Reload tests after creation with a small delay to ensure Firestore sync
+    setTimeout(() => {
+      loadTests();
+    }, 1000);
   };
 
   if (showCreator) {

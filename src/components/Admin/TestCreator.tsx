@@ -205,21 +205,24 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
   const handleSaveTest = async () => {
     const errors = validateTest();
     if (errors.length > 0) {
-      alert('Please fix the following errors:\n' + errors.join('\n'));
+      alert('Please fix the following errors:\n• ' + errors.join('\n• '));
       return;
     }
 
     try {
       setSaving(true);
       
-      const test: Omit<Test, 'id' | 'createdAt'> = {
+      // Create the test object with all required fields
+      const testData: Omit<Test, 'id' | 'createdAt'> = {
         ...testData,
         questions,
         totalMarks: calculateTotalMarks(),
         isActive: true
       };
 
-      await createTest(test);
+      // Save test to Firestore
+      const docRef = await createTest(testData);
+      console.log('Test created with ID:', docRef.id);
       
       // Reset form
       setTestData({
@@ -234,11 +237,12 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
       setIsCreating(false);
       setShowPreview(false);
       
+      // Notify parent component and show success message
       onTestCreated();
-      alert('Test created successfully! It is now available to all students.');
+      alert(`✅ Test "${testData.title}" created successfully!\n\nThe test is now live and available to all students in Class ${testData.class}.`);
     } catch (error) {
       console.error('Error creating test:', error);
-      alert('Failed to create test. Please try again.');
+      alert('❌ Failed to create test. Please check your internet connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -730,12 +734,40 @@ const TestCreator: React.FC<TestCreatorProps> = ({ onTestCreated, onCancel }) =>
           {/* Save Button */}
           <button
             onClick={handleSaveTest}
-            disabled={saving || validateTest().length > 0}
-            className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+            disabled={saving}
+            className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+              saving 
+                ? 'bg-gray-400 text-white cursor-not-allowed' 
+                : validateTest().length > 0
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-gradient-to-r from-green-600 to-blue-600 text-white hover:from-green-700 hover:to-blue-700 shadow-lg hover:shadow-xl transform hover:scale-105'
+            }`}
           >
             <Save className="h-5 w-5" />
-            <span>{saving ? 'Creating Test...' : 'Create Test'}</span>
+            <span>
+              {saving 
+                ? 'Creating Test...' 
+                : validateTest().length > 0 
+                ? `Fix ${validateTest().length} Error${validateTest().length > 1 ? 's' : ''} First`
+                : 'Create Test'
+              }
+            </span>
           </button>
+          
+          {/* Validation Summary */}
+          {validateTest().length > 0 && !saving && (
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <h4 className="text-sm font-semibold text-red-800 mb-2">Please fix these issues:</h4>
+              <ul className="text-sm text-red-700 space-y-1">
+                {validateTest().map((error, index) => (
+                  <li key={index} className="flex items-start space-x-2">
+                    <span className="text-red-500 mt-0.5">•</span>
+                    <span>{error}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
 

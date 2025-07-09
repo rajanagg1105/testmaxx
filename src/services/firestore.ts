@@ -30,11 +30,21 @@ export const getUserById = async (userId: string) => {
 
 // Test services
 export const createTest = async (testData: Omit<Test, 'id' | 'createdAt'>) => {
+  console.log('Creating test with data:', testData);
+  
   const test = {
     ...testData,
     createdAt: new Date()
   };
-  return await addDoc(collection(db, 'tests'), test);
+  
+  try {
+    const docRef = await addDoc(collection(db, 'tests'), test);
+    console.log('Test created successfully with ID:', docRef.id);
+    return docRef;
+  } catch (error) {
+    console.error('Error creating test in Firestore:', error);
+    throw error;
+  }
 };
 
 export const getTestsByClass = async (classNumber: number) => {

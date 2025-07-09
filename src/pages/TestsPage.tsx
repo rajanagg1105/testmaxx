@@ -30,10 +30,10 @@ const TestsPage: React.FC = () => {
   useEffect(() => {
     loadTests();
     
-    // Set up real-time listener for test updates
+    // Set up real-time listener for test updates - more frequent for immediate updates
     const interval = setInterval(() => {
       loadTests();
-    }, 5000); // Refresh every 5 seconds
+    }, 3000); // Refresh every 3 seconds for faster updates
     
     return () => clearInterval(interval);
   }, [selectedClass]);
