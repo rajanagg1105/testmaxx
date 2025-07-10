@@ -11,11 +11,14 @@ import {
   Target
 } from 'lucide-react';
 import { Test } from '../types';
-import { getTestsByClass, getAllTests } from '../services/firestore';
+import { getTestsByClass, getAllTests, getActiveTestsForStudents, createTestAttempt } from '../services/firestore';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
 import TestTaker from '../components/Test/TestTaker';
+import TestResults from '../components/Test/TestResults';
+import { useAuth } from '../contexts/AuthContext';
 
 const TestsPage: React.FC = () => {
+  const { currentUser } = useAuth();
   const { preferences } = useUserPreferences();
   const [tests, setTests] = useState<Test[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,6 +26,7 @@ const TestsPage: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTest, setActiveTest] = useState<Test | null>(null);
+  const [testResults, setTestResults] = useState<any>(null);
 
   const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
@@ -30,10 +34,10 @@ const TestsPage: React.FC = () => {
   useEffect(() => {
     loadTests();
     
-    // Set up real-time listener for test updates - more frequent for immediate updates
+    // Set up real-time listener for test updates
     const interval = setInterval(() => {
       loadTests();
-    }, 3000); // Refresh every 3 seconds for faster updates
+    }, 5000); // Refresh every 5 seconds
     
     return () => clearInterval(interval);
   }, [selectedClass]);
@@ -43,15 +47,15 @@ const TestsPage: React.FC = () => {
       setLoading(true);
       let testsData: Test[];
       
-      if (selectedClass === 'all') {
-        testsData = await getAllTests();
-      } else {
-        testsData = await getTestsByClass(selectedClass);
+      // Always get active tests for students
+      testsData = await getActiveTestsForStudents();
+      
+      // Filter by class if specific class is selected
+      if (selectedClass !== 'all') {
+        testsData = testsData.filter(test => test.class === selectedClass);
       }
       
-      // Only show active tests to students
-      const activeTests = testsData.filter(test => test.isActive);
-      setTests(activeTests);
+      setTests(testsData);
     } catch (error) {
       console.error('Error loading tests:', error);
     } finally {
@@ -91,33 +95,102 @@ const TestsPage: React.FC = () => {
     setActiveTest(test);
   };
 
-  const handleTestSubmit = (answers: Record<string, string | number>, timeSpent: number) => {
-    // Calculate score
-    let correctAnswers = 0;
-    
-    if (activeTest) {
-      activeTest.questions.forEach(question => {
-        const userAnswer = answers[question.id];
-        if (userAnswer === question.correctAnswer) {
-          correctAnswers++;
-        }
-      });
+  const handleTestSubmit = async (answers: Record<string, string | number>, timeSpent: number) => {
+    if (!activeTest || !currentUser) return;
 
-      const score = correctAnswers;
-      const percentage = Math.round((score / activeTest.questions.length) * 100);
+    // Calculate score and analyze answers
+    let correctAnswers = 0;
+    const questionResults: any[] = [];
+    const topicPerformance: Record<string, { correct: number; total: number }> = {};
+    
+    activeTest.questions.forEach(question => {
+      const userAnswer = answers[question.id];
+      const isCorrect = userAnswer === question.correctAnswer;
       
-      // TODO: Save test attempt to Firestore
-      console.log('Test submitted:', {
+      if (isCorrect) {
+        correctAnswers++;
+      }
+      
+      // Track topic performance
+      if (!topicPerformance[question.topic]) {
+        topicPerformance[question.topic] = { correct: 0, total: 0 };
+      }
+      topicPerformance[question.topic].total++;
+      if (isCorrect) {
+        topicPerformance[question.topic].correct++;
+      }
+      
+      // Store question result for detailed view
+      questionResults.push({
+        question: question.question,
+        userAnswer: question.type === 'fill-blank' ? userAnswer : 
+                   question.options ? question.options[userAnswer as number] : userAnswer,
+        correctAnswer: question.type === 'fill-blank' ? question.correctAnswer :
+                      question.options ? question.options[question.correctAnswer as number] : question.correctAnswer,
+        isCorrect,
+        explanation: question.explanation,
+        topic: question.topic,
+        difficulty: question.difficulty,
+        type: question.type,
+        options: question.options
+      });
+    });
+
+    const score = correctAnswers;
+    const percentage = Math.round((score / activeTest.questions.length) * 100);
+    
+    // Generate suggestions based on performance
+    const suggestions: string[] = [];
+    Object.entries(topicPerformance).forEach(([topic, perf]) => {
+      const topicPercentage = (perf.correct / perf.total) * 100;
+      if (topicPercentage < 60) {
+        suggestions.push(`Focus more on ${topic} - you got ${perf.correct}/${perf.total} questions correct`);
+      } else if (topicPercentage === 100) {
+        suggestions.push(`Excellent work on ${topic}! You got all questions correct`);
+      }
+    });
+    
+    if (percentage >= 90) {
+      suggestions.push("Outstanding performance! Keep up the excellent work!");
+    } else if (percentage >= 70) {
+      suggestions.push("Good job! Review the topics you missed to improve further.");
+    } else if (percentage >= 50) {
+      suggestions.push("You're on the right track. Focus on understanding the concepts better.");
+    } else {
+      suggestions.push("Don't worry! Review the study materials and practice more questions.");
+    }
+
+    try {
+      // Save test attempt to Firestore
+      await createTestAttempt({
         testId: activeTest.id,
+        userId: currentUser.uid,
         answers,
         score,
-        percentage,
-        timeSpent
+        totalMarks: activeTest.questions.length,
+        timeSpent,
+        analysis: {
+          topicPerformance,
+          suggestions
+        }
       });
-
-      alert(`Test completed! You scored ${score}/${activeTest.questions.length} (${percentage}%)`);
+    } catch (error) {
+      console.error('Error saving test attempt:', error);
     }
+
+    // Prepare results data
+    const resultsData = {
+      test: activeTest,
+      score,
+      totalQuestions: activeTest.questions.length,
+      percentage,
+      timeSpent,
+      questionResults,
+      topicPerformance,
+      suggestions
+    };
     
+    setTestResults(resultsData);
     setActiveTest(null);
   };
 
@@ -127,6 +200,9 @@ const TestsPage: React.FC = () => {
     }
   };
 
+  const handleCloseResults = () => {
+    setTestResults(null);
+  };
   if (activeTest) {
     return (
       <TestTaker
@@ -137,6 +213,14 @@ const TestsPage: React.FC = () => {
     );
   }
 
+  if (testResults) {
+    return (
+      <TestResults
+        results={testResults}
+        onClose={handleCloseResults}
+      />
+    );
+  }
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}

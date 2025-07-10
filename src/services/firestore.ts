@@ -64,6 +64,16 @@ export const getAllTests = async () => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Test));
 };
 
+export const getActiveTestsForStudents = async () => {
+  const q = query(
+    collection(db, 'tests'),
+    where('isActive', '==', true),
+    orderBy('createdAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Test));
+};
+
 // Test attempt services
 export const createTestAttempt = async (attemptData: Omit<TestAttempt, 'id' | 'completedAt'>) => {
   const attempt = {

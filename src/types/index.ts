@@ -43,10 +43,10 @@ export interface TestAttempt {
   totalMarks: number;
   timeSpent?: number; // in seconds
   completedAt: Date | any; // Allow Firestore Timestamp
-  analysis: {
+  analysis?: {
     topicPerformance: Record<string, { correct: number; total: number }>;
     suggestions: string[];
-  } | null;
+  };
 }
 
 export interface StudyMaterial {
