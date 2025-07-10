@@ -65,13 +65,20 @@ export const getAllTests = async () => {
 };
 
 export const getActiveTestsForStudents = async () => {
+  // Get all tests and filter/sort in memory to avoid composite index requirement
   const q = query(
     collection(db, 'tests'),
-    where('isActive', '==', true),
-    orderBy('createdAt', 'desc')
+    where('isActive', '==', true)
   );
   const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Test));
+  const tests = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Test));
+  
+  // Sort by createdAt in descending order (newest first)
+  return tests.sort((a, b) => {
+    const dateA = a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt);
+    const dateB = b.createdAt instanceof Date ? b.createdAt : new Date(b.createdAt);
+    return dateB.getTime() - dateA.getTime();
+  });
 };
 
 // Test attempt services
