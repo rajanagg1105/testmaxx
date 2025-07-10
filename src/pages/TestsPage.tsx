@@ -13,6 +13,7 @@ import {
 import { Test } from '../types';
 import { getTestsByClass, getAllTests, getActiveTestsForStudents, createTestAttempt } from '../services/firestore';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
+import { getUserTestAttempts } from '../services/firestore';
 import TestTaker from '../components/Test/TestTaker';
 import TestResults from '../components/Test/TestResults';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,20 +28,28 @@ const TestsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTest, setActiveTest] = useState<Test | null>(null);
   const [testResults, setTestResults] = useState<any>(null);
+  const [userAttempts, setUserAttempts] = useState<any[]>([]);
+  const [animatingTests, setAnimatingTests] = useState<Set<string>>(new Set());
 
   const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
 
   useEffect(() => {
     loadTests();
+    if (currentUser) {
+      loadUserAttempts();
+    }
     
     // Set up real-time listener for test updates
     const interval = setInterval(() => {
       loadTests();
+      if (currentUser) {
+        loadUserAttempts();
+      }
     }, 5000); // Refresh every 5 seconds
     
     return () => clearInterval(interval);
-  }, [selectedClass]);
+  }, [selectedClass, currentUser]);
 
   const loadTests = async () => {
     try {
@@ -60,6 +69,17 @@ const TestsPage: React.FC = () => {
       console.error('Error loading tests:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadUserAttempts = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const attempts = await getUserTestAttempts(currentUser.uid);
+      setUserAttempts(attempts);
+    } catch (error) {
+      console.error('Error loading user attempts:', error);
     }
   };
 
@@ -91,7 +111,35 @@ const TestsPage: React.FC = () => {
     return 'Medium';
   };
 
+  const getTestAttemptInfo = (testId: string) => {
+    const attempts = userAttempts.filter(attempt => attempt.testId === testId);
+    if (attempts.length === 0) return null;
+    
+    const latestAttempt = attempts[0]; // Already sorted by completedAt desc
+    const bestScore = Math.max(...attempts.map(a => a.score));
+    const bestPercentage = Math.round((bestScore / latestAttempt.totalMarks) * 100);
+    
+    return {
+      attempts: attempts.length,
+      latestScore: latestAttempt.score,
+      latestPercentage: Math.round((latestAttempt.score / latestAttempt.totalMarks) * 100),
+      bestScore,
+      bestPercentage,
+      lastAttempted: latestAttempt.completedAt
+    };
+  };
+
   const handleStartTest = (test: Test) => {
+    // Add animation effect
+    setAnimatingTests(prev => new Set(prev).add(test.id));
+    setTimeout(() => {
+      setAnimatingTests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(test.id);
+        return newSet;
+      });
+    }, 1000);
+    
     setActiveTest(test);
   };
 
@@ -192,6 +240,11 @@ const TestsPage: React.FC = () => {
     
     setTestResults(resultsData);
     setActiveTest(null);
+    
+    // Reload user attempts to update the UI
+    setTimeout(() => {
+      loadUserAttempts();
+    }, 1000);
   };
 
   const handleCloseTest = () => {
@@ -203,6 +256,14 @@ const TestsPage: React.FC = () => {
   const handleCloseResults = () => {
     setTestResults(null);
   };
+
+  const getScoreColor = (percentage: number) => {
+    if (percentage >= 90) return 'text-green-600';
+    if (percentage >= 70) return 'text-blue-600';
+    if (percentage >= 50) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   if (activeTest) {
     return (
       <TestTaker
@@ -307,9 +368,36 @@ const TestsPage: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTests.map((test) => (
-            <div key={test.id} className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+            const attemptInfo = getTestAttemptInfo(test.id);
+            const isAnimating = animatingTests.has(test.id);
+            
+            <div key={test.id} className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+              isAnimating ? 'animate-pulse scale-105 shadow-lg' : ''
+            } ${attemptInfo ? 'ring-2 ring-blue-200' : ''}`}>
               {/* Test Header */}
               <div className="p-6 pb-4">
+                {/* Attempt Badge */}
+                {attemptInfo && (
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                        ✓ Attempted {attemptInfo.attempts} time{attemptInfo.attempts > 1 ? 's' : ''}
+                      </span>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                        attemptInfo.bestPercentage >= 90 ? 'bg-green-100 text-green-800' :
+                        attemptInfo.bestPercentage >= 70 ? 'bg-blue-100 text-blue-800' :
+                        attemptInfo.bestPercentage >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        Best: {attemptInfo.bestPercentage}%
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Last: {new Date(attemptInfo.lastAttempted).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">{test.title}</h3>
@@ -359,22 +447,46 @@ const TestsPage: React.FC = () => {
                   <div className="text-xs text-gray-500">
                     Created: {new Date(test.createdAt).toLocaleDateString()}
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm font-medium text-gray-900">New</span>
-                  </div>
+                  {attemptInfo ? (
+                    <div className="flex items-center space-x-1">
+                      <Trophy className="h-4 w-4 text-blue-500" />
+                      <span className={`text-sm font-medium ${getScoreColor(attemptInfo.latestPercentage)}`}>
+                        {attemptInfo.latestPercentage}%
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                      <span className="text-sm font-medium text-gray-900">New</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Test Actions */}
               <div className="px-6 pb-6">
-                <button 
-                  onClick={() => handleStartTest(test)}
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2"
-                >
-                  <Play className="h-4 w-4" />
-                  <span>Start Test</span>
-                </button>
+                {attemptInfo ? (
+                  <div className="space-y-2">
+                    <button 
+                      onClick={() => handleStartTest(test)}
+                      className="w-full bg-gradient-to-r from-green-600 to-blue-600 text-white py-3 rounded-lg font-medium hover:from-green-700 hover:to-blue-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      <span>Reattempt Test</span>
+                    </button>
+                    <div className="text-center text-xs text-gray-500">
+                      Improve your score of {attemptInfo.latestScore}/{test.questions.length}
+                    </div>
+                  </div>
+                ) : (
+                  <button 
+                    onClick={() => handleStartTest(test)}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2"
+                  >
+                    <Play className="h-4 w-4" />
+                    <span>Start Test</span>
+                  </button>
+                )}
               </div>
             </div>
           ))}

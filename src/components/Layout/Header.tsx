@@ -2,22 +2,25 @@ import React, { useState } from 'react';
 import { BookOpen, LogOut, User, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserPreferences } from '../../contexts/UserPreferencesContext';
+import { useNavigate } from 'react-router-dom';
 import UserProfile from '../Profile/UserProfile';
 
 const Header: React.FC = () => {
   const { currentUser, logout } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
+  const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   const handleResetPreferences = async () => {
-    if (window.confirm('This will reset your class selection and you will need to choose your class again. Are you sure?')) {
+    if (window.confirm('This will reset your class selection and redirect you to choose your class again. Your progress will be preserved. Are you sure?')) {
       try {
         await updatePreferences({
           selectedClass: undefined,
           hasCompletedOnboarding: false
         });
-        window.location.reload();
+        // Navigate to root which will trigger the onboarding flow
+        navigate('/');
       } catch (error) {
         console.error('Error resetting preferences:', error);
         alert('Failed to reset preferences. Please try again.');

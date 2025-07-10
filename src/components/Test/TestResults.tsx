@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Trophy, 
   Clock, 
@@ -29,6 +30,7 @@ interface TestResultsProps {
 }
 
 const TestResults: React.FC<TestResultsProps> = ({ results, onClose }) => {
+  const navigate = useNavigate();
   const {
     test,
     score,
@@ -290,7 +292,10 @@ const TestResults: React.FC<TestResultsProps> = ({ results, onClose }) => {
                   <p className="text-gray-600 text-sm mb-4">
                     Review study materials to strengthen your understanding
                   </p>
-                  <button className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors">
+                  <button 
+                    onClick={() => navigate('/study-material')}
+                    className="w-full bg-purple-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                  >
                     View Study Materials
                   </button>
                 </div>

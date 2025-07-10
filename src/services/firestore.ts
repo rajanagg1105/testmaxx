@@ -100,6 +100,27 @@ export const getTestAttemptsByUser = async (userId: string) => {
   return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
 };
 
+export const getUserTestAttempts = async (userId: string) => {
+  const q = query(
+    collection(db, 'testAttempts'),
+    where('userId', '==', userId),
+    orderBy('completedAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+};
+
+export const getTestAttemptsByTestAndUser = async (testId: string, userId: string) => {
+  const q = query(
+    collection(db, 'testAttempts'),
+    where('testId', '==', testId),
+    where('userId', '==', userId),
+    orderBy('completedAt', 'desc')
+  );
+  const querySnapshot = await getDocs(q);
+  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+};
+
 // Study material services
 export const createStudyMaterial = async (materialData: Omit<StudyMaterial, 'id' | 'uploadedAt'>) => {
   const material = {

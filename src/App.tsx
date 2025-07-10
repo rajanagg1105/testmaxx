@@ -36,6 +36,7 @@ const OnboardingFlow: React.FC = () => {
 const AppContent: React.FC = () => {
   const { currentUser, loading: authLoading } = useAuth();
   const { preferences, loading: preferencesLoading } = useUserPreferences();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   if (authLoading || preferencesLoading) {
     return (
@@ -53,7 +54,7 @@ const AppContent: React.FC = () => {
   }
 
   // Show onboarding for students who haven't completed it
-  if (currentUser.role === 'student' && !preferences.hasCompletedOnboarding) {
+  if (currentUser.role === 'student' && (!preferences.hasCompletedOnboarding || showOnboarding)) {
     return <OnboardingFlow />;
   }
 

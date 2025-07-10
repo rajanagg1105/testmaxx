@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useUserPreferences } from '../../contexts/UserPreferencesContext';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
 
@@ -50,6 +51,7 @@ interface UserProfileProps {
 const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
   const { currentUser } = useAuth();
   const { preferences, updatePreferences } = useUserPreferences();
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState<UserProfileData | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -144,9 +146,15 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
   const handleChangeClass = async () => {
     if (!currentUser) return;
 
-    const confirmChange = window.confirm(
-      'This will reset your class selection and you will need to choose your class again. All your progress will be preserved. Are you sure you want to continue?'
-    );
+    const confirmChange = window.confirm(`
+      This will reset your class selection and redirect you to choose your class again. 
+      
+      ✓ All your progress will be preserved
+      ✓ Your test attempts will remain saved
+      ✓ Your study materials will still be available
+      
+      Are you sure you want to continue?
+    `.trim());
 
     if (!confirmChange) return;
 
@@ -162,8 +170,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
       // Close profile modal
       onClose();
       
-      // Reload the page to trigger onboarding flow
-      window.location.reload();
+      // Navigate to root which will trigger the onboarding flow
+      navigate('/');
     } catch (error) {
       console.error('Error changing class:', error);
       alert('Failed to change class. Please try again.');
