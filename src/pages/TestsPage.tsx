@@ -367,11 +367,12 @@ const TestsPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTests.map((test) => (
+          {filteredTests.map((test) => {
             const attemptInfo = getTestAttemptInfo(test.id);
             const isAnimating = animatingTests.has(test.id);
             
-            <div key={test.id} className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
+            return (
+              <div key={test.id} className={`bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden ${
               isAnimating ? 'animate-pulse scale-105 shadow-lg' : ''
             } ${attemptInfo ? 'ring-2 ring-blue-200' : ''}`}>
               {/* Test Header */}
@@ -489,7 +490,8 @@ const TestsPage: React.FC = () => {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
