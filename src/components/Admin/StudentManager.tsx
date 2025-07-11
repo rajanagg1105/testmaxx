@@ -319,7 +319,7 @@ const StudentManager: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        <span>{student.lastActive ? new Date(student.lastActive).toLocaleDateString() : 'Never'}</span>
+                        <span>Last seen: {student.lastActive ? new Date(student.lastActive).toLocaleDateString() : 'Never'}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">

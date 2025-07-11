@@ -15,6 +15,7 @@ import TestManager from './components/Admin/TestManager';
 import MaterialManager from './components/Admin/MaterialManager';
 import StudentManager from './components/Admin/StudentManager';
 import VideoManager from './components/Admin/VideoManager';
+import ResultsPage from './pages/ResultsPage';
 
 const OnboardingFlow: React.FC = () => {
   const { updatePreferences } = useUserPreferences();
@@ -80,7 +81,7 @@ const AppContent: React.FC = () => {
                 <Route path="/tests" element={<TestsPage />} />
                 <Route path="/study-material" element={<StudyMaterialPage />} />
                 <Route path="/videos" element={<VideosPage />} />
-                <Route path="/results" element={<div className="p-6"><h1 className="text-2xl font-bold">My Results</h1><p className="text-gray-600 mt-2">Results page coming soon...</p></div>} />
+                <Route path="/results" element={<ResultsPage />} />
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </>
             )}

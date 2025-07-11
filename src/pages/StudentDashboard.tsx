@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Trophy, 
   Clock, 
@@ -15,11 +15,34 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserPreferences } from '../contexts/UserPreferencesContext';
+import { getUserTestAttempts } from '../services/firestore';
 
 const StudentDashboard: React.FC = () => {
   const { currentUser } = useAuth();
   const { preferences } = useUserPreferences();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [recentAttempts, setRecentAttempts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadRecentAttempts();
+    }
+  }, [currentUser]);
+
+  const loadRecentAttempts = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setLoading(true);
+      const attempts = await getUserTestAttempts(currentUser.uid);
+      setRecentAttempts(attempts.slice(0, 3)); // Get latest 3 attempts
+    } catch (error) {
+      console.error('Error loading recent attempts:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const recentTests = [
     { id: 1, title: 'Mathematics - Algebra', score: 85, total: 100, date: '2024-01-15' },
@@ -430,7 +453,7 @@ const StudentDashboard: React.FC = () => {
                   <div key={test.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{test.title}</h3>
-                      <p className="text-sm text-gray-500">{test.date}</p>
+                      <p className="text-sm text-gray-500">Attempted: {new Date(test.date).toLocaleDateString()}</p>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
@@ -461,7 +484,38 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {upcomingTests.map((test) => (
+                {loading ? (
+                  <div className="text-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                  </div>
+                ) : recentAttempts.length > 0 ? (
+                  recentAttempts.map((attempt) => (
+                    <div key={attempt.id} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                      <h3 className="font-medium text-gray-900 mb-2">Recent Test Attempt</h3>
+                      <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                        <span>Score: {attempt.score}/{attempt.totalMarks}</span>
+                        <span className={`font-medium ${
+                          Math.round((attempt.score / attempt.totalMarks) * 100) >= 70 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {Math.round((attempt.score / attempt.totalMarks) * 100)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{new Date(attempt.completedAt).toLocaleDateString()}</span>
+                        </div>
+                        {attempt.timeSpent && (
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-3 w-3" />
+                            <span>{Math.round(attempt.timeSpent / 60)}m</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  upcomingTests.map((test) => (
                   <div key={test.id} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
                     <h3 className="font-medium text-gray-900 mb-2">{test.title}</h3>
                     <div className="flex items-center justify-between text-sm text-gray-600">
@@ -475,7 +529,8 @@ const StudentDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </div>
           </div>
