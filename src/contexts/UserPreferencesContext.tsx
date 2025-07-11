@@ -4,7 +4,7 @@ import { db } from '../config/firebase';
 import { useAuth } from './AuthContext';
 
 interface UserPreferences {
-  selectedClass?: 6 | 7 | 8;
+  selectedClass?: 6 | 7 | 8 | null;
   hasCompletedOnboarding?: boolean;
 }
 

@@ -101,13 +101,32 @@ export const getTestAttemptsByUser = async (userId: string) => {
 };
 
 export const getUserTestAttempts = async (userId: string) => {
-  const q = query(
-    collection(db, 'testAttempts'),
-    where('userId', '==', userId),
-    orderBy('completedAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+  try {
+    // First try with ordering (requires composite index)
+    const q = query(
+      collection(db, 'testAttempts'),
+      where('userId', '==', userId),
+      orderBy('completedAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+  } catch (error) {
+    // If composite index doesn't exist, fall back to simple query and sort in memory
+    console.warn('Composite index not available, falling back to client-side sorting');
+    const q = query(
+      collection(db, 'testAttempts'),
+      where('userId', '==', userId)
+    );
+    const querySnapshot = await getDocs(q);
+    const attempts = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TestAttempt));
+    
+    // Sort by completedAt in descending order (newest first)
+    return attempts.sort((a, b) => {
+      const dateA = a.completedAt instanceof Date ? a.completedAt : new Date(a.completedAt);
+      const dateB = b.completedAt instanceof Date ? b.completedAt : new Date(b.completedAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+  }
 };
 
 export const getTestAttemptsByTestAndUser = async (testId: string, userId: string) => {

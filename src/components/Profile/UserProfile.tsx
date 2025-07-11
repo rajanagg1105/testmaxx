@@ -163,7 +163,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
       
       // Reset user preferences to trigger class selection
       await updatePreferences({
-        selectedClass: undefined,
+        selectedClass: null,
         hasCompletedOnboarding: false
       });
 
