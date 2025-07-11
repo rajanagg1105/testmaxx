@@ -21,6 +21,7 @@ import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../../config/firebase';
+import ConfirmationDialog from '../Common/ConfirmationDialog';
 
 interface UserProfileData {
   uid: string;
@@ -58,6 +59,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [changingClass, setChangingClass] = useState(false);
+  const [showClassChangeDialog, setShowClassChangeDialog] = useState(false);
 
   useEffect(() => {
     if (isOpen && currentUser) {
@@ -144,19 +146,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
   };
 
   const handleChangeClass = async () => {
+    setShowClassChangeDialog(true);
+  };
+
+  const confirmClassChange = async () => {
     if (!currentUser) return;
-
-    const confirmChange = window.confirm(`
-      This will reset your class selection and redirect you to choose your class again. 
-      
-      ✓ All your progress will be preserved
-      ✓ Your test attempts will remain saved
-      ✓ Your study materials will still be available
-      
-      Are you sure you want to continue?
-    `.trim());
-
-    if (!confirmChange) return;
 
     try {
       setChangingClass(true);
@@ -166,6 +160,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
         selectedClass: null,
         hasCompletedOnboarding: false
       });
+      setShowClassChangeDialog(false);
 
       // Close profile modal
       onClose();
@@ -280,7 +275,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
                       <button
                         onClick={handleChangeClass}
                         disabled={changingClass}
-                        className="flex items-center space-x-1 text-sm text-orange-600 hover:text-orange-800 font-medium transition-colors disabled:opacity-50"
+                        className="flex items-center space-x-1 px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm disabled:opacity-50"
                       >
                         <RefreshCw className={`h-4 w-4 ${changingClass ? 'animate-spin' : ''}`} />
                         <span>{changingClass ? 'Changing...' : 'Change Class'}</span>
@@ -596,6 +591,26 @@ const UserProfile: React.FC<UserProfileProps> = ({ isOpen, onClose }) => {
           </div>
         )}
       </div>
+
+      {/* Class Change Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showClassChangeDialog}
+        onClose={() => setShowClassChangeDialog(false)}
+        onConfirm={confirmClassChange}
+        title="Change Class"
+        message={`You are about to change your class selection from Class ${preferences.selectedClass || 'Unknown'}.
+
+✓ All your progress will be preserved
+✓ Your test attempts will remain saved
+✓ Your study materials will still be available
+✓ You can access content for your new class
+
+This will redirect you to the class selection page.`}
+        confirmText="Change Class"
+        cancelText="Keep Current Class"
+        type="info"
+        loading={changingClass}
+      />
     </div>
   );
 };

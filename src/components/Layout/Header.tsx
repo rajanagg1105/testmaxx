@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useUserPreferences } from '../../contexts/UserPreferencesContext';
 import { useNavigate } from 'react-router-dom';
 import UserProfile from '../Profile/UserProfile';
+import ConfirmationDialog from '../Common/ConfirmationDialog';
 
 const Header: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -11,20 +12,28 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showClassChangeDialog, setShowClassChangeDialog] = useState(false);
+  const [changingClass, setChangingClass] = useState(false);
 
   const handleResetPreferences = async () => {
-    if (window.confirm('This will reset your class selection and redirect you to choose your class again. Your progress will be preserved. Are you sure?')) {
-      try {
-        await updatePreferences({
-          selectedClass: undefined,
-          hasCompletedOnboarding: false
-        });
-        // Navigate to root which will trigger the onboarding flow
-        navigate('/');
-      } catch (error) {
-        console.error('Error resetting preferences:', error);
-        alert('Failed to reset preferences. Please try again.');
-      }
+    setShowClassChangeDialog(true);
+  };
+
+  const confirmClassChange = async () => {
+    try {
+      setChangingClass(true);
+      await updatePreferences({
+        selectedClass: null,
+        hasCompletedOnboarding: false
+      });
+      setShowClassChangeDialog(false);
+      // Navigate to root which will trigger the onboarding flow
+      navigate('/');
+    } catch (error) {
+      console.error('Error resetting preferences:', error);
+      alert('Failed to reset preferences. Please try again.');
+    } finally {
+      setChangingClass(false);
     }
   };
 
@@ -133,6 +142,26 @@ const Header: React.FC = () => {
           onClose={() => setShowProfile(false)} 
         />
       )}
+
+      {/* Class Change Confirmation Dialog */}
+      <ConfirmationDialog
+        isOpen={showClassChangeDialog}
+        onClose={() => setShowClassChangeDialog(false)}
+        onConfirm={confirmClassChange}
+        title="Change Class"
+        message={`You are about to change your class selection.
+
+✓ All your progress will be preserved
+✓ Your test attempts will remain saved  
+✓ Your study materials will still be available
+✓ You can access content for your new class
+
+This will redirect you to the class selection page.`}
+        confirmText="Change Class"
+        cancelText="Keep Current Class"
+        type="info"
+        loading={changingClass}
+      />
     </>
   );
 };
