@@ -266,6 +266,28 @@ const StudentDashboard: React.FC = () => {
     return 'bg-red-500';
   };
 
+  // Study materials data - this would typically come from a database
+  const studyMaterials = [
+    {
+      id: '1',
+      title: 'Mathematics Fundamentals',
+      subject: 'Mathematics',
+      pages: 45
+    },
+    {
+      id: '2',
+      title: 'Science Concepts',
+      subject: 'Science',
+      pages: 32
+    },
+    {
+      id: '3',
+      title: 'English Grammar',
+      subject: 'English',
+      pages: 28
+    }
+  ];
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Welcome Section */}
