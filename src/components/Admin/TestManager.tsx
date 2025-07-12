@@ -342,7 +342,13 @@ const TestManager: React.FC = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center space-x-2 text-sm text-gray-600">
                         <Calendar className="h-4 w-4" />
-                        <span>Created: {new Date(test.createdAt).toLocaleDateString()}</span>
+                        <span>Created: {new Date(test.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</span>
                       </div>
                     </td>
                     <td className="py-4 px-6">

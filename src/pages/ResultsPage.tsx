@@ -301,7 +301,13 @@ const ResultsPage: React.FC = () => {
                           <div>
                             <div className="text-gray-500">Date Attempted</div>
                             <div className="font-medium text-gray-900">
-                              {new Date(attempt.completedAt).toLocaleDateString()}
+                              {new Date(attempt.completedAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
                             </div>
                           </div>
                           <div>

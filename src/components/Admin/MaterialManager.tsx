@@ -421,7 +421,13 @@ const MaterialManager: React.FC = () => {
                 <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
                   <div className="flex items-center space-x-1">
                     <Calendar className="h-4 w-4" />
-                    <span>Uploaded: {new Date(material.uploadedAt).toLocaleDateString()}</span>
+                    <span>Uploaded: {new Date(material.uploadedAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}</span>
                   </div>
                   <span className="font-medium">{material.fileName}</span>
                 </div>
