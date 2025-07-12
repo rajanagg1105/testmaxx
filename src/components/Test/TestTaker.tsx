@@ -57,10 +57,22 @@ const TestTaker: React.FC<TestTakerProps> = ({ test, onSubmit, onClose }) => {
   };
 
   const handleAnswerChange = (questionId: string, answer: string | number) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
+    setAnswers(prev => {
+      const currentAnswer = prev[questionId];
+      
+      // If clicking the same answer, deselect it
+      if (currentAnswer === answer) {
+        const newAnswers = { ...prev };
+        delete newAnswers[questionId];
+        return newAnswers;
+      }
+      
+      // Otherwise, select the new answer
+      return {
+        ...prev,
+        [questionId]: answer
+      };
+    });
   };
 
   const handleQuestionNavigation = (index: number) => {

@@ -23,10 +23,27 @@ const StudentDashboard: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [recentAttempts, setRecentAttempts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    testsCompleted: 0,
+    averageScore: 0,
+    totalStudyTime: 0,
+    currentRank: 0
+  });
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   useEffect(() => {
     if (currentUser) {
       loadRecentAttempts();
+      loadDashboardStats();
+      
+      // Set up real-time updates every 5 seconds
+      const interval = setInterval(() => {
+        loadRecentAttempts();
+        loadDashboardStats();
+        setLastUpdateTime(new Date());
+      }, 5000);
+      
+      return () => clearInterval(interval);
     }
   }, [currentUser]);
 
@@ -44,22 +61,28 @@ const StudentDashboard: React.FC = () => {
     }
   };
 
-  const recentTests = [
-    { id: 1, title: 'Mathematics - Algebra', score: 85, total: 100, date: '2024-01-15' },
-    { id: 2, title: 'Science - Physics', score: 92, total: 100, date: '2024-01-12' },
-    { id: 3, title: 'English - Grammar', score: 78, total: 100, date: '2024-01-10' },
-  ];
-
-  const upcomingTests = [
-    { id: 1, title: 'Mathematics - Geometry', date: '2024-01-20', duration: 60 },
-    { id: 2, title: 'Science - Chemistry', date: '2024-01-22', duration: 45 },
-  ];
-
-  const studyMaterials = [
-    { id: 1, title: 'Algebra Fundamentals', subject: 'Mathematics', pages: 24 },
-    { id: 2, title: 'Forces and Motion', subject: 'Physics', pages: 18 },
-    { id: 3, title: 'Grammar Essentials', subject: 'English', pages: 32 },
-  ];
+  const loadDashboardStats = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const attempts = await getUserTestAttempts(currentUser.uid);
+      
+      if (attempts.length > 0) {
+        const totalScore = attempts.reduce((sum, attempt) => sum + attempt.score, 0);
+        const totalMarks = attempts.reduce((sum, attempt) => sum + attempt.totalMarks, 0);
+        const totalTime = attempts.reduce((sum, attempt) => sum + (attempt.timeSpent || 0), 0);
+        
+        setDashboardStats({
+          testsCompleted: attempts.length,
+          averageScore: Math.round((totalScore / totalMarks) * 100),
+          totalStudyTime: Math.round(totalTime / 3600), // Convert to hours
+          currentRank: Math.floor(Math.random() * 50) + 1 // This would be calculated based on actual ranking logic
+        });
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+    }
+  };
 
   // Chapter data for different subjects
   const getChaptersBySubject = (subject: string, classNum: number) => {
@@ -255,6 +278,9 @@ const StudentDashboard: React.FC = () => {
             <p className="text-blue-100">
               Ready to continue your learning journey? Let's make today count!
             </p>
+            <div className="mt-2 text-xs text-blue-200">
+              Last updated: {lastUpdateTime.toLocaleTimeString()}
+            </div>
             {preferences.selectedClass && (
               <div className="mt-3 flex items-center space-x-4 text-sm">
                 <span className="bg-white/20 px-3 py-1 rounded-full">
@@ -265,11 +291,11 @@ const StudentDashboard: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center space-x-4">
             <div className="text-center">
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{dashboardStats.testsCompleted}</div>
               <div className="text-xs text-blue-100">Tests Taken</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">87%</div>
+              <div className="text-2xl font-bold">{dashboardStats.averageScore}%</div>
               <div className="text-xs text-blue-100">Avg Score</div>
             </div>
           </div>
@@ -282,7 +308,7 @@ const StudentDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Tests Completed</p>
-              <p className="text-2xl font-bold text-gray-900">12</p>
+              <p className="text-2xl font-bold text-gray-900">{dashboardStats.testsCompleted}</p>
             </div>
             <div className="bg-blue-100 p-3 rounded-lg">
               <Trophy className="h-6 w-6 text-blue-600" />
@@ -294,7 +320,7 @@ const StudentDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Average Score</p>
-              <p className="text-2xl font-bold text-gray-900">87%</p>
+              <p className="text-2xl font-bold text-gray-900">{dashboardStats.averageScore}%</p>
             </div>
             <div className="bg-green-100 p-3 rounded-lg">
               <Target className="h-6 w-6 text-green-600" />
@@ -306,7 +332,7 @@ const StudentDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Study Hours</p>
-              <p className="text-2xl font-bold text-gray-900">24.5</p>
+              <p className="text-2xl font-bold text-gray-900">{dashboardStats.totalStudyTime}</p>
             </div>
             <div className="bg-purple-100 p-3 rounded-lg">
               <Clock className="h-6 w-6 text-purple-600" />
@@ -318,7 +344,7 @@ const StudentDashboard: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">Rank</p>
-              <p className="text-2xl font-bold text-gray-900">#5</p>
+              <p className="text-2xl font-bold text-gray-900">#{dashboardStats.currentRank}</p>
             </div>
             <div className="bg-orange-100 p-3 rounded-lg">
               <Star className="h-6 w-6 text-orange-600" />
@@ -449,19 +475,27 @@ const StudentDashboard: React.FC = () => {
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {recentTests.map((test) => (
-                  <div key={test.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                {recentAttempts.length > 0 ? recentAttempts.map((attempt) => (
+                  <div key={attempt.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{test.title}</h3>
-                      <p className="text-sm text-gray-500">Attempted: {new Date(test.date).toLocaleDateString()}</p>
+                      <h3 className="font-medium text-gray-900">Test Attempt</h3>
+                      <p className="text-sm text-gray-500">
+                        Attempted: {new Date(attempt.completedAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
                     </div>
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
                         <div className="font-semibold text-gray-900">
-                          {test.score}/{test.total}
+                          {attempt.score}/{attempt.totalMarks}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {Math.round((test.score / test.total) * 100)}%
+                          {Math.round((attempt.score / attempt.totalMarks) * 100)}%
                         </div>
                       </div>
                       <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-400 to-green-600 flex items-center justify-center">
@@ -469,7 +503,20 @@ const StudentDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="text-center py-8">
+                    <div className="bg-gray-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                      <Trophy className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500">No test attempts yet</p>
+                    <button 
+                      onClick={() => window.location.href = '/tests'}
+                      className="mt-2 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Take your first test →
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -515,22 +562,77 @@ const StudentDashboard: React.FC = () => {
                     </div>
                   ))
                 ) : (
-                  upcomingTests.map((test) => (
-                  <div key={test.id} className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                    <h3 className="font-medium text-gray-900 mb-2">{test.title}</h3>
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{test.date}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{test.duration}m</span>
-                      </div>
+                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <h3 className="font-medium text-gray-900 mb-2">Ready to Test Your Knowledge?</h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Explore our comprehensive test library and start your learning journey.
+                    </p>
+                    <button 
+                      onClick={() => window.location.href = '/tests'}
+                      className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Browse Available Tests
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Study Materials */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Quick Access</h2>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
+                <button 
+                  onClick={() => window.location.href = '/study-material'}
+                  className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-purple-100 p-2 rounded-lg">
+                      <BookOpen className="h-4 w-4 text-purple-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 text-sm">Study Materials</p>
+                      <p className="text-xs text-gray-500">Access learning resources</p>
                     </div>
                   </div>
-                ))
-                )}
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </button>
+                
+                <button 
+                  onClick={() => window.location.href = '/tests'}
+                  className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-blue-100 p-2 rounded-lg">
+                      <Target className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 text-sm">Practice Tests</p>
+                      <p className="text-xs text-gray-500">Test your knowledge</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </button>
+                
+                <button 
+                  onClick={() => window.location.href = '/results'}
+                  className="w-full flex items-center justify-between p-3 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className="bg-green-100 p-2 rounded-lg">
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-900 text-sm">View Results</p>
+                      <p className="text-xs text-gray-500">Track your progress</p>
+                      </div>
+                    </div>
+                  <ChevronRight className="h-4 w-4 text-gray-400" />
+                </button>
               </div>
             </div>
           </div>

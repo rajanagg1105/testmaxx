@@ -8,7 +8,8 @@ import {
   Search,
   BookOpen,
   Trophy,
-  Target
+  Target,
+  Calendar
 } from 'lucide-react';
 import { Test } from '../types';
 import { getTestsByClass, getAllTests, getActiveTestsForStudents, createTestAttempt } from '../services/firestore';
@@ -30,6 +31,7 @@ const TestsPage: React.FC = () => {
   const [testResults, setTestResults] = useState<any>(null);
   const [userAttempts, setUserAttempts] = useState<any[]>([]);
   const [animatingTests, setAnimatingTests] = useState<Set<string>>(new Set());
+  const [lastUpdateTime, setLastUpdateTime] = useState<Date>(new Date());
 
   const subjects = ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi', 'Sanskrit'];
   const classes = [6, 7, 8];
@@ -40,13 +42,14 @@ const TestsPage: React.FC = () => {
       loadUserAttempts();
     }
     
-    // Set up real-time listener for test updates
+    // Set up real-time listener for test updates every 3 seconds
     const interval = setInterval(() => {
       loadTests();
       if (currentUser) {
         loadUserAttempts();
       }
-    }, 5000); // Refresh every 5 seconds
+      setLastUpdateTime(new Date());
+    }, 3000); // Refresh every 3 seconds for real-time feel
     
     return () => clearInterval(interval);
   }, [selectedClass, currentUser]);
@@ -342,6 +345,9 @@ const TestsPage: React.FC = () => {
           <div className="flex items-center space-x-2 text-sm text-gray-600">
             <Filter className="h-4 w-4" />
             <span>{filteredTests.length} tests found</span>
+            <span className="text-xs text-gray-400">
+              • Last updated: {lastUpdateTime.toLocaleTimeString()}
+            </span>
           </div>
         </div>
       </div>
@@ -445,8 +451,29 @@ const TestsPage: React.FC = () => {
 
                 {/* Created Date */}
                 <div className="flex items-center justify-between mb-4">
-                  <div className="text-xs text-gray-500">
-                    Created: {new Date(test.createdAt).toLocaleDateString()}
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-3 w-3" />
+                      <span>Created: {new Date(test.createdAt).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}</span>
+                    </div>
+                    {attemptInfo && (
+                      <div className="flex items-center space-x-1">
+                        <Clock className="h-3 w-3" />
+                        <span>Last attempted: {new Date(attemptInfo.lastAttempted).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}</span>
+                      </div>
+                    )}
                   </div>
                   {attemptInfo ? (
                     <div className="flex items-center space-x-1">
